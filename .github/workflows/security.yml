@@ -1,0 +1,41 @@
+name: Security pipeline
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  verify:
+    name: Lint, type check, tests, scans and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: github/codeql-action/init@v3
+        with: { languages: javascript-typescript, build-mode: none }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - uses: returntocorp/semgrep-action@v1
+        with: { config: p/default }
+      - run: npx snyk test --severity-threshold=high
+        env: { SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }} }
+        continue-on-error: true # Remove only after SNYK_TOKEN is configured.
+      - uses: aquasecurity/trivy-action@0.28.0
+        with: { scan-type: fs, scan-ref: ., severity: HIGH,CRITICAL, exit-code: "1" }
+      - uses: trufflesecurity/trufflehog@main
+        with: { path: ./, base: main, head: HEAD, extra_args: --only-verified }
+      - run: npm run build
+      - uses: github/codeql-action/analyze@v3
+  dast:
+    name: OWASP ZAP baseline (staging)
+    needs: verify
+    if: github.event_name == 'push' && vars.STAGING_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: zaproxy/action-baseline@v0.14.0
+        with: { target: ${{ vars.STAGING_URL }}, allow_issue_writing: false }

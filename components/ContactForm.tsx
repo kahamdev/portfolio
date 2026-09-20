@@ -1,0 +1,7 @@
+"use client";
+import { FormEvent, useState } from "react";
+export function ContactForm() {
+  const [message, setMessage] = useState<string | null>(null);
+  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); const email = String(form.get("email") || ""); const note = String(form.get("message") || ""); if (!/^\S+@\S+\.\S+$/.test(email) || note.trim().length < 10 || note.length > 2000) { setMessage("Enter a valid email and a message between 10 and 2,000 characters."); return; } setMessage("Thanks — this demonstration form validates locally and does not transmit your details."); event.currentTarget.reset(); }
+  return <form noValidate onSubmit={submit} className="card space-y-4" aria-describedby="form-status"><div><label className="mb-1 block text-sm font-bold" htmlFor="email">Email</label><input required maxLength={254} type="email" name="email" id="email" className="w-full rounded-lg border border-slate-300 px-3 py-2" autoComplete="email" /></div><div><label className="mb-1 block text-sm font-bold" htmlFor="message">Message</label><textarea required minLength={10} maxLength={2000} name="message" id="message" rows={4} className="w-full rounded-lg border border-slate-300 px-3 py-2" /></div><button className="rounded-lg bg-signal px-4 py-2 font-bold text-white hover:bg-teal-700" type="submit">Send message</button>{message && <p id="form-status" role="status" className="text-sm text-slate-600">{message}</p>}</form>;
+}
